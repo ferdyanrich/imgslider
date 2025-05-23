@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galeri Menu Makanan</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Mencegah scrollbar pada body dokumen iframe ini */
+            font-family: 'Inter', sans-serif;
+            background-color: transparent; /* Latar belakang body transparan agar background dari overlay terlihat */
+        }
+
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: none; /* Akan diubah oleh JS */
+            justify-content: center;
+            align-items: center;
+            opacity: 0; /* Akan diubah oleh JS */
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000; /* Jaga-jaga jika ada elemen lain yang tidak diinginkan */
+        }
+
+        .popup-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .popup-content {
+            background-color: #1f2937; /* Warna latar popup konten */
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            position: relative;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1200px;
+            max-height: 800px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .popup-image-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background-color: #374151; /* Warna latar saat gambar loading */
+        }
+
+        .popup-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Memastikan gambar tidak terpotong */
+            border-radius: 6px;
+            transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+        
+        .popup-image.loading {
+            transform: scale(0.95);
+            opacity: 0.5;
+        }
+
+        .thumbnail-previews {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            height: 70px;
+        }
+
+        .thumbnail-item {
+            width: 100px;
+            height: 60px;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+            background-color: #4b5563;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .thumbnail-item:hover {
+            border-color: #4f46e5;
+            transform: scale(1.05);
+        }
+        
+        .thumbnail-item.empty {
+            background-color: #374151;
+            cursor: default;
+            border-color: transparent;
+        }
+        .thumbnail-item.empty:hover {
+            transform: none;
+        }
+
+        .thumbnail-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .popup-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding-top: 12px;
+            border-top: 1px solid #4b5563;
+        }
+
+        .nav-button, .action-button {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-button:hover, .action-button:hover {
+            background-color: #4338ca;
+        }
+        .nav-button:active, .action-button:active {
+            transform: scale(0.96);
+        }
+
+        .nav-button:disabled {
+            background-color: #6b7280;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: rgba(49, 46, 129, 0.7);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            line-height: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+            z-index: 10;
+        }
+
+        .close-button:hover {
+            background-color: rgba(67, 56, 202, 0.9);
+            transform: rotate(90deg);
+        }
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="imagePopupOverlay" class="popup-overlay">
+        <div class="popup-content">
+            <button id="closeGalleryBtn" class="close-button" aria-label="Tutup Galeri">&times;</button>
+
+            <div class="popup-image-container">
+                <img id="popupImage" src="" alt="Menu Makanan" class="popup-image">
+            </div>
+
+            <div class="thumbnail-previews">
+                <div id="prevThumbnail" class="thumbnail-item">
+                    <img id="prevThumbnailImage" src="" alt="Preview Sebelumnya">
+                </div>
+                <div id="nextThumbnail" class="thumbnail-item">
+                    <img id="nextThumbnailImage" src="" alt="Preview Berikutnya">
+                </div>
+            </div>
+
+            <div class="popup-controls">
+                <button id="prevBtn" class="nav-button">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Sebelumnya
+                </button>
+                <button id="downloadBtn" class="action-button">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download
+                </button>
+                <button id="nextBtn" class="nav-button">
+                    Berikutnya
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Tidak ada openPopupBtn di sini karena galeri langsung aktif
+            const closeGalleryBtn = document.getElementById('closeGalleryBtn');
+            const imagePopupOverlay = document.getElementById('imagePopupOverlay');
+            const popupImage = document.getElementById('popupImage');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            const prevThumbnailContainer = document.getElementById('prevThumbnail');
+            const nextThumbnailContainer = document.getElementById('nextThumbnail');
+            const prevThumbnailImage = document.getElementById('prevThumbnailImage');
+            const nextThumbnailImage = document.getElementById('nextThumbnailImage');
+
+            // =====================================================================
+            // PENTING: Ganti URL gambar placeholder di bawah ini dengan URL gambar Anda!
+            // =====================================================================
+            const imageUrls = [
+                'https://placehold.co/800x600/FFC107/000000?text=Menu+1:+Nasi+Goreng',
+                'https://placehold.co/800x600/4CAF50/FFFFFF?text=Menu+2:+Sate+Ayam',
+                'https://placehold.co/800x600/E91E63/FFFFFF?text=Menu+3:+Gado-Gado',
+                'https://placehold.co/800x600/2196F3/FFFFFF?text=Menu+4:+Rendang',
+                'https://placehold.co/800x600/9C27B0/FFFFFF?text=Menu+5:+Soto+Ayam',
+                'https://placehold.co/800x600/FF9800/000000?text=Menu+6:+Bakso'
+                // Tambahkan URL gambar menu lainnya di sini
+            ];
+            // =====================================================================
+
+            let currentIndex = 0;
+
+            function updateThumbnails(index) {
+                if (index > 0) {
+                    prevThumbnailImage.src = imageUrls[index - 1];
+                    prevThumbnailImage.alt = `Preview: Gambar ${index}`;
+                    prevThumbnailContainer.classList.remove('empty');
+                    prevThumbnailContainer.onclick = () => showImage(index - 1);
+                } else {
+                    prevThumbnailImage.src = '';
+                    prevThumbnailImage.alt = 'Tidak ada gambar sebelumnya';
+                    prevThumbnailContainer.classList.add('empty');
+                    prevThumbnailContainer.onclick = null;
+                }
+
+                if (index < imageUrls.length - 1) {
+                    nextThumbnailImage.src = imageUrls[index + 1];
+                    nextThumbnailImage.alt = `Preview: Gambar ${index + 2}`;
+                    nextThumbnailContainer.classList.remove('empty');
+                    nextThumbnailContainer.onclick = () => showImage(index + 1);
+                } else {
+                    nextThumbnailImage.src = '';
+                    nextThumbnailImage.alt = 'Tidak ada gambar berikutnya';
+                    nextThumbnailContainer.classList.add('empty');
+                    nextThumbnailContainer.onclick = null;
+                }
+            }
+
+            function showImage(index) {
+                currentIndex = index;
+                popupImage.classList.add('loading');
+                
+                setTimeout(() => {
+                    popupImage.src = imageUrls[index];
+                    const imageName = imageUrls[index].split('text=')[1] || `Menu Makanan ${index + 1}`;
+                    popupImage.alt = imageName;
+                    
+                    popupImage.onload = () => {
+                        popupImage.classList.remove('loading');
+                    };
+                    popupImage.onerror = () => {
+                        popupImage.src = 'https://placehold.co/600x400/CCCCCC/FFFFFF?text=Error+Memuat+Gambar';
+                        popupImage.alt = 'Error memuat gambar';
+                        popupImage.classList.remove('loading');
+                    };
+                }, 50);
+
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === imageUrls.length - 1;
+                updateThumbnails(index);
+            }
+
+            function initializeAndShowGallery() {
+                if (imageUrls.length === 0) {
+                    console.error("Tidak ada gambar untuk ditampilkan. Harap isi array imageUrls.");
+                    // Anda bisa menampilkan pesan error di UI di sini
+                    const content = document.querySelector('.popup-content');
+                    if(content) content.innerHTML = "<p style='color:white; text-align:center;'>Tidak ada gambar untuk ditampilkan.</p>";
+                    imagePopupOverlay.classList.add('active'); // Tetap tampilkan overlay walau kosong
+                    return;
+                }
+                showImage(0); // Tampilkan gambar pertama
+                imagePopupOverlay.classList.add('active'); // Aktifkan overlay agar terlihat
+            }
+
+            function hideGalleryContent() {
+                // Fungsi ini akan menyembunyikan konten galeri di dalam iframe.
+                // Iframe itu sendiri masih akan ada, ditutup oleh modal Nicepage.
+                imagePopupOverlay.classList.remove('active');
+                // Anda bisa mengosongkan src gambar untuk menghemat memori jika perlu
+                // setTimeout(() => { popupImage.src = ""; }, 300); // Sesuaikan dengan durasi transisi
+            }
+
+            closeGalleryBtn.addEventListener('click', hideGalleryContent);
+
+            document.addEventListener('keydown', (event) => {
+                if (imagePopupOverlay.classList.contains('active')) { // Hanya jika galeri aktif
+                    if (event.key === 'Escape') {
+                        hideGalleryContent();
+                    } else if (event.key === 'ArrowLeft' && currentIndex > 0) {
+                        showImage(currentIndex - 1);
+                    } else if (event.key === 'ArrowRight' && currentIndex < imageUrls.length - 1) {
+                        showImage(currentIndex + 1);
+                    }
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    showImage(currentIndex - 1);
+                }
+            });
+
+            nextBtn.addEventListener('click', () => {
+                if (currentIndex < imageUrls.length - 1) {
+                    showImage(currentIndex + 1);
+                }
+            });
+
+            downloadBtn.addEventListener('click', () => {
+                const imageUrl = imageUrls[currentIndex];
+                const link = document.createElement('a');
+                link.href = imageUrl;
+                
+                let filename = imageUrl.substring(imageUrl.lastIndexOf('/') + 1);
+                filename = filename.split('?')[0] || `menu-item-${currentIndex + 1}.jpg`;
+                if (!filename.includes('.')) {
+                    filename += '.jpg';
+                }
+
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+
+            // Langsung inisialisasi dan tampilkan galeri saat halaman dimuat
+            initializeAndShowGallery();
+        });
+    </script>
+</body>
+</html>
